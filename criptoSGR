@@ -1,0 +1,651 @@
+#!/bin/sh
+
+########################################################################################################
+#Trabalho realizado por Nuno Diogo da Silva, no âmbito de Segurança e Gestão de Redes. Trabalho nº1
+#
+#ANO LECTIVO 2011/2012 - 1º SEMESTRE, NOVEMBRO DE 2011
+########################################################################################################
+
+while : ; do
+
+#Variável utilizada para usar Xdialog
+DIALOG=${DIALOG=dialog}
+tempfile=`tempfile 2>/dev/null` || tempfile=/tmp/test$$
+trap "rm -f $tempfile" 0 1 2 5 15
+
+
+# MENU PRINCIPAL
+$DIALOG --clear --title "criptoSGR" --backtitle "Menu Principal" \
+        --menu "Escolha uma opcção:" 18 80 6 \
+        1 "Criar Par de Chaves Assimétricas" \
+        2 "Distribuição de Chave Simétrica" \
+        3 "Encriptação de Mensagens" \
+        4 "Criar Resumo Criptográfico Seguro" \
+        5 "Assinar Digitalmente/Criar Envelope Digital do Ficheiro" \
+        6 "Verificar Assinatura/Envelope/Resumo Criptográfico Seguro" 2> $tempfile
+
+retval=$?
+
+choice=`cat $tempfile`
+
+## MENU PRINCIPAL - INICIO ##
+case $retval in
+  0)
+	case $choice in
+  		1)	## RESPONSÁVEL PELO A CRIAÇÃO DAS CHAVES ASSIMÉTRICAS - INICIO ##
+
+			$DIALOG --clear --title "criptoSGR" --backtitle "Criar Par de Chaves Assimétricas" \
+        		--menu "Escolha uma opcção:" 20 51 2 \
+        		1 "RSA" \
+        		2 "DSA" 2> $tempfile
+
+			retval=$?
+		
+			choice=`cat $tempfile`
+
+			case $retval in
+				0)
+					case $choice in
+						1)
+							
+							$DIALOG --title "criptoSGR" --backtitle "RSA" --clear \
+        						--inputbox "Introduza o seu nome:" 16 51 2> $tempfile
+
+							name=`cat $tempfile`			
+
+							retval=$?
+							
+							case $retval in
+								0)
+									DIRECTORY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Escolha uma localização:" --dselect $HOME/ 30 60 4`
+									retval=$?
+
+									case $retval in
+										0)
+											finalPrv="_PrKey_RSA.pem"
+        	                                                                	finalPub="_PubKey_RSA.pem"
+
+											openssl genrsa -out "$DIRECTORY/$name$finalPrv"
+											openssl rsa -pubout -in "$DIRECTORY/$name$finalPrv" -out "$DIRECTORY/$name$finalPub";;
+										1)
+											echo "Cancel pressed.";;
+										255)
+											echo "ESC pressed.";;
+									esac;;
+		  						1)
+									echo "Cancel pressed.";;
+								255)
+									echo "ESC pressed.";;
+							esac;;		
+						2)	
+							$DIALOG --title "criptoSGR" --backtitle "DSA" --clear \
+                  					--inputbox "Introduza o seu nome:" 16 51 2> $tempfile
+
+                  					name=`cat $tempfile`
+
+							retval=$?
+					
+							case $retval in
+								0)
+									DIRECTORY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Escolha uma localização:" --dselect $HOME/ 30 60 4`
+	 								retval=$?
+									case $retval in
+										0)
+		  									finalPrv="_PrKey_DSA.pem"
+		  									finalPub="_PubKey_DSA.pem"
+
+	          									openssl dsaparam -genkey -out "$DIRECTORY/$name$finalPrv" 512
+		  									openssl dsa -in "$DIRECTORY/$name$finalPrv" -pubout -out "$DIRECTORY/$name$finalPub";;
+										1)
+											echo "Cancel pressed.";;
+										255)
+											echo "ESC pressed.";;
+									esac;;
+								1)
+									echo "Cancel pressed.";;
+								255)
+									echo "ESC pressed.";;
+							esac;;
+					esac;;
+				1)
+                		        echo "Cancel pressed.";;
+	                	255)
+                        		echo "ESC pressed.";;
+
+
+			esac;;
+
+			## RESPONSÁVEL PELO A CRIAÇÃO DAS CHAVES ASSIMÉTRICAS - FIM ##
+		2)
+			## DISTRIBUIÇÃO DE CHAVE ASSIMÉTRICA - INÍCIO ##
+
+			$DIALOG --title "criptoSGR" --backtitle "Distribuição de Chave Simétrica" --clear \
+                        --passwordbox "Introduza a sua chave simétrica:" 16 60 2> $tempfile
+
+                        password=`cat $tempfile`
+			
+			echo "$password" > /tmp/tmppwd
+			
+			retval=$?
+
+			case $retval in
+				0)
+					PUBKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Insira uma chave pública (RSA):" --fselect $HOME/ 30 60 4`
+
+					retval=$?
+
+					case $retval in
+						0)
+							$DIALOG --title "criptoSGR" --clear --inputbox "Introduza nome para ficheiros:" 16 51 2> $tempfile 
+
+							name=`cat $tempfile`
+
+							DIRECTORY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Escolha uma localização:" --dselect $HOME/ 30 60 4`
+							retval=$?
+							
+							case $retval in
+								0)
+									openssl rsautl -encrypt -in /tmp/tmppwd -out "$DIRECTORY/$name.encryptPubRSA.pem" -inkey "$PUBKEY" -pubin
+									openssl enc -a -in "$DIRECTORY/$name.encryptPubRSA.pem" -out "$DIRECTORY/$name.encryptPubRSA.pem.64"
+									rm -f "$DIRECTORY/$name.encryptPubRSA.pem";;
+								1)
+									echo "Cancel pressed.";;
+								255)
+									echo "ESC pressed.";;
+							esac;;
+						1)
+							echo "Cancel pressed.";;
+						255)
+							echo "ESC pressed.";;
+					esac;;
+
+				1)
+					echo "Cancel pressed.";;
+				255)
+					echo "ESC pressed.";;
+			esac;;
+
+			## DISTRIBUIÇÃO DE CHAVE ASSIMÉTRICA - FIM ##
+		3)
+			## ENCRIPTAÇÃO DE MENSAGENS - INÍCIO ##			
+
+                        $DIALOG --clear --title "criptoSGR" --backtitle "Encriptação de Mensagens" \
+                        --menu "Escolha uma opcção:" 20 51 4 \
+                        1 "DES" \
+                        2 "DES3" \
+                        3 "AES256" \
+                        4 "Blowfish" 2> $tempfile
+
+			retval=$?
+
+                        choice=`cat $tempfile`
+
+			case $retval in
+                                0)
+
+					FILE=`$DIALOG --stdout --title "criptoSGR" --backtitle "Insira o ficheiro a ser encriptado:" --fselect $HOME/ 30 60 4`
+					retval=$?
+
+					case $retval in
+						0)
+							$DIALOG --title "criptoSGR" --clear --inputbox "Introduza nome para o criptograma:" 16 51 2> $tempfile 
+
+							name=`cat $tempfile`
+
+							retval=$?
+
+        						case $retval in
+                						0)
+                                                                        $DIALOG --title "criptoSGR" --backtitle "Distribuição de Chave Simétrica" --clear \
+                                                                        --passwordbox "Introduza a password para encriptar: " 16 51 2> $tempfile
+
+                                                                        password=`cat $tempfile`
+
+                                                                        retval=$?
+
+                                                                        case $retval in
+                                                                                0)
+                                                                                        DIRECTORY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Escolha uma localização:" --dselect $HOME/ 30 60 4`
+
+											case $choice in
+												1)
+													openssl enc -a -des -in "$FILE" -pass pass:"$password" -out "$DIRECTORY/$name.DES";;
+												2)
+													openssl enc -a -des3 -in "$FILE" -pass pass:"$password" -out "$DIRECTORY/$name.DES3";;
+												3)
+													openssl enc -a -aes-256-cbc -in "$FILE" -pass pass:"$password" -out "$DIRECTORY/$name.AES";;
+												4)
+													openssl enc -a -blowfish -in "$FILE" -pass pass:"$password" -out "$DIRECTORY/$name.Blowfish";;
+
+											esac;;
+										1)
+											echo "Cancel pressed.";;
+										255)
+											echo "ESC pressed.";;
+									esac;;
+								1)
+									echo "Cancel pressed.";;
+								255)
+									echo "ESC pressed.";;
+							esac;;
+						1)
+							echo "Cancel pressed.";;
+						255)
+							echo "ESC pressed.";;
+					esac;;
+                                1)
+					echo "Cancel pressed";;
+                                255)
+					echo "ESC pressed.";;
+			esac;;
+			
+			## ENCRIPTAÇÃO DE MENSAGENS - FIM ##
+
+			## CRIAR RESUMO CRIPTOGRÁFICO SEGURO - INICIO ##
+		4)
+                        $DIALOG --clear --title "criptoSGR" --backtitle "Criar Resumo Criptográfico Seguro" \
+                        --menu "Escolha uma opcção:" 20 51 4 \
+                        1 "MAC" \
+                        2 "HMAC" 2> $tempfile
+			
+			retval=$?
+
+                        choice=`cat $tempfile`
+
+			case $retval in
+				0)
+					case $choice in
+						1)
+							FILE=`$DIALOG --stdout --title "criptoSGR" --backtitle "Insira o ficheiro para aplicar função de Hash:" --fselect $HOME/ 30 60 4`
+
+                                                        retval=$?
+
+                                                        case $retval in
+                                                                0)
+                                                                        $DIALOG --title "criptoSGR" --backtitle "MAC" --clear \
+                                                                        --passwordbox "Introduza a password para aplicar MAC: " 16 51 2> $tempfile
+
+                                                                        password=`cat $tempfile`
+							
+									echo "$password" > /tmp/tmppwd									
+                                                                        retval=$?
+
+                                                                        case $retval in
+                                                                                0)
+											$DIALOG --clear --title "criptoSGR" --backtitle "Qual o algoritmo para encriptar?" \
+                    	--menu "Escolha uma opcção:" 20 51 4 \
+                        1 "DES" \
+                        2 "DES3" \
+                        3 "AES256" \
+                        4 "Blowfish" 2> $tempfile
+											choice=`cat $tempfile`
+
+											PUBKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Insira chave publica RSA\nPara distribuição da chave simétrica" --fselect $HOME/ 30 60 4`
+
+											$DIALOG --title "criptoSGR" --clear --inputbox "Introduza nome para ficheiros:" 16 51 2> $tempfile
+											
+                                                                                        DIRECTORY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Escolha uma localização:" --dselect $HOME/ 30 60 4`
+
+                                                                                        retval=$?
+
+                                                                                        case $retval in
+                                                                                                0)
+													name=`cat $tempfile`
+
+													case $choice in
+														1)
+															openssl dgst -sha224 -out "$DIRECTORY/$name.hash.pem" "$FILE"
+                                                                                                        		openssl enc -des -in "$DIRECTORY/$name.hash.pem" -pass pass:"$password" -out "$DIRECTORY/$name.mac.DES";;
+					
+														2)
+															openssl dgst -sha224 -out "$DIRECTORY/$name.hash.pem" "$FILE"
+                                                                                                        		openssl enc -des3 -in "$DIRECTORY/$name.hash.pem" -pass pass:"$password" -out "$DIRECTORY/$name.mac.DES3";;
+															
+														3)
+															openssl dgst -sha224 -out "$DIRECTORY/$name.hash.pem" "$FILE"
+                                                                                                        		openssl enc -aes-256-cbc -in "$DIRECTORY/$name.hash.pem" -pass pass:"$password" -out "$DIRECTORY/$name.mac.AES";;
+															
+														4)
+															openssl dgst -sha224 -out "$DIRECTORY/$name.hash.pem" "$FILE"
+                                                                                                        		openssl enc -blowfish -in "$DIRECTORY/$name.hash.pem" -pass pass:"$password" -out "$DIRECTORY/$name.mac.Blowfish";;
+													esac
+													openssl rsautl -encrypt -in /tmp/tmppwd -inkey "$PUBKEY" -pubin -out "$DIRECTORY/$name.macKey.encrypt.pem"
+
+															openssl enc -a -in "$DIRECTORY/$name.macKey.encrypt.pem" -out "$DIRECTORY/$name.macKey.encryptPubRSA.pem.64"
+															rm -f "$DIRECTORY/$name.macKey.encrypt.pem";;
+                                                                                               1)
+                                                                                                        echo "Cancel pressed.";;
+                                                                                                255)
+                                                                                                        echo "ESC pressed.";;
+                                                                                        esac;;
+                                                                                1)
+                                                                                        echo "Cancel pressed.";;
+                                                                                255)
+                                                                                        echo "ESC pressed.";;
+                                                                        esac;;
+                                                                1)
+                                                                        echo "Cancel pressed.";;
+                                                                255)
+                                                                        echo "ESC pressed.";;
+                                                        esac;;
+						2)
+							FILE=`$DIALOG --stdout --title "criptoSGR" --backtitle "Insira o ficheiro para aplicar função de Hash:" --fselect $HOME/ 30 60 4`
+
+                                                        retval=$?
+
+                                                        case $retval in
+                                                                0)
+                                                                        $DIALOG --title "criptoSGR" --backtitle "HMAC" --clear \
+                                                                        --passwordbox "Introduza a password para aplicar HMAC: " 16 51 2> $tempfile
+
+                                                                        password=`cat $tempfile`
+
+									echo "$password" > /tmp/temppwd
+
+                                                                        retval=$?
+
+                                                                        case $retval in
+                                                                                0)
+											$DIALOG --title "criptoSGR" --clear --inputbox "Introduza nome para ficheiros:" 16 51 2> $tempfile
+											PUBKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Insira chave publica RSA\nPara distribuição da chave simétrica" --fselect $HOME/ 30 60 4`
+
+											name=`cat $tempfile`
+
+                                                                                        DIRECTORY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Escolha uma localização:" --dselect $HOME/ 30 60 4`
+
+                                                                                        retval=$?
+
+                                                                                        case $retval in
+                                                                                        	0)
+													openssl dgst -md5 -hmac "$password" -out "$DIRECTORY/$name.hmac" "$FILE"
+													openssl rsautl -encrypt -in /tmp/temppwd -inkey "$PUBKEY" -pubin -out "$DIRECTORY/$name.hmacKey.encrypt.pem"
+
+													openssl enc -a -in "$DIRECTORY/$name.hmacKey.encrypt.pem" -out "$DIRECTORY/$name.hmacKey.encryptPubRSA.pem.64"
+															rm -f "$DIRECTORY/$name.hmacKey.encrypt.pem";;
+												1)
+                                                                                                        echo "Cancel pressed.";;
+												                                                                           								                     255)
+                                                                                                        echo "ESC pressed.";;
+                                                                                        esac;;
+                                                                                1)
+                                                                                        echo "Cancel pressed.";;
+                                                                                255)
+                                                                                        echo "ESC pressed.";;
+                                                                        esac;;
+                                                                1)
+                                                                        echo "Cancel pressed.";;
+                                                                255)
+                                                                        echo "ESC pressed.";;
+                                                        esac;;
+					esac;;
+				1)
+					echo "Cancel pressed.";;
+				255)
+					echo "ESC pressed.";;		
+			esac;;
+
+			## CRIAR RESUMO CRIPTOGRÁFICO SEGURO - FIM ##
+
+		5)	## ASSINAR DIGITALMENTE / CRIAR ENVELOPE DIGITAL DO FICHEIRO - INICIO ##
+
+                        $DIALOG --clear --title "criptoSGR" --backtitle "Assinar Digitalmente/Criar Envelope Digital do Ficheiro" \
+                        --menu "Escolha uma opcção:" 15 65 4 \
+                        1 "Assinar Digitalmente" \
+                        2 "Criar Envelope Digital" 2> $tempfile
+
+			retval=$?
+
+                        choice=`cat $tempfile`
+
+			case $retval in
+				0)
+					case $choice in
+						1)
+							FILE_SIGN=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir o ficheiro a assinar:" --fselect $HOME/ 30 60 4`
+
+							retval=$?
+
+							case $retval in
+								0)
+									FILE_PRKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir chave privada(RSA):" --fselect $HOME/ 30 60 4`
+									retval=$?
+
+									case $retval in
+										0)
+											openssl dgst -md5 -sign "$FILE_PRKEY" -out "$FILE_SIGN.RSA_sign.pem" "$FILE_SIGN";;
+										1)
+											echo "Cancel pressed.";;
+										255)
+											echo "ESC pressed.";;
+									esac;;
+								1)
+									echo "Cancel pressed.";;
+								255)
+									echo "ESC pressed.";;
+							esac;;
+						2)
+                                                        FILE_SIGN=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir o ficheiro para o ENVELOPE:" --fselect $HOME/ 30 60 4`
+
+                                                        retval=$?
+
+                                                        case $retval in
+                                                                0)
+                                                                        FILE_PRKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir chave privada(DSA):" --fselect $HOME/ 30 60 4`
+                                                                        retval=$?
+
+                                                                        case $retval in
+                                                                                0)
+                                                                                        openssl dgst -dss1 -sign "$FILE_PRKEY" -out "$FILE_SIGN.DSA_sign.pem" "$FILE_SIGN";;
+                                                                                1)
+                                                                                        echo "Cancel pressed.";;
+                                                                                255)
+                                                                                        echo "ESC pressed.";;
+                                                                        esac;;
+                                                                1)
+                                                                        echo "Cancel pressed.";;
+                                                                255)
+                                                                        echo "ESC pressed.";;
+                                                        esac;;
+
+					esac;;
+				1)
+					echo "Cancel pressed.";;
+				255)
+					echo "ESC pressed.";;			
+			esac;;
+
+			## ASSINAR DIGITALMENTE / CRIAR ENVELOPE DIGITAL DO FICHEIRO - FIM ##
+
+		6)	## VERIFICAR ASSINATURA / ENVELOPE / RESUMO CRIPTOGRAFICO SEGURO - INICIO ##
+
+                        $DIALOG --clear --title "criptoSGR" --backtitle "Verificar Assinatura/Envelope/Resumo Criptográfico Seguro" \
+                        --menu "Escolha uma opcção:" 15 70 4 \
+                        1 "Verificar Assinatura" \
+                        2 "Verificar Envelope" \
+                        3 "Verificar Resumo Criptográfico Seguro" 2> $tempfile
+
+			retval=$?
+
+                        choice=`cat $tempfile`
+
+			case $retval in
+				0)
+					case $choice in
+						1)	# VERIFICA A ASSINATURA
+
+							FILE_VERIFY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir a ASSINATURA:" --fselect $HOME/ 30 60 4`
+
+							retval=$?
+
+							case $retval in
+								0)
+									FILE_PUBKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir CHAVE PÚBLICA(RSA):" --fselect $HOME/ 30 60 4`
+									retval=$?
+
+									case $retval in
+										0)
+											FILE_IN=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir ficheiro ORIGINAL:" --fselect $HOME/ 30 60 4`
+											retval=$?
+
+											case $retval in
+												0)
+											
+													result=`openssl dgst -md5 -verify "$FILE_PUBKEY" -signature "$FILE_VERIFY" "$FILE_IN"`
+
+													if [ "$result" = "Verified OK" ];
+														then
+															`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação OK" 10 30`
+													else
+														`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação Falhou!" 10 30`
+													fi;;
+												1)
+													echo "Cancel pressed";;
+												255)
+													echo "ESC pressed.";;
+											esac;;
+										1)
+											echo "Cancel pressed";;
+										255)
+											echo "ESC pressed.";;
+									esac;;
+								1)
+									echo "Cancel pressed";;
+								255)
+									echo "ESC pressed.";;
+							esac;;
+
+						2)	# VERIFICA O ENVELOPE
+
+							FILE_VERIFY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir o ENVELOPE:" --fselect $HOME/ 30 60 4`
+
+							retval=$?
+
+							case $retval in
+								0)
+									FILE_PUBKEY=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir CHAVE PÚBLICA(DSA):" --fselect $HOME/ 30 60 4`
+									retval=$?
+
+									case $retval in
+										0)
+											FILE_IN=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir ficheiro ORIGINAL:" --fselect $HOME/ 30 60 4`
+											retval=$?
+
+											case $retval in
+												0)
+											
+													result=`openssl dgst -dss1 -verify "$FILE_PUBKEY" -signature "$FILE_VERIFY" "$FILE_IN"`
+													if [ "$result" = "Verified OK" ];
+														then
+															`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação OK" 10 30`
+													else
+														`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação Falhou!" 10 30`
+													fi;;
+												1)
+													echo "Cancel pressed";;
+												255)
+													echo "ESC pressed.";;
+											esac;;
+										1)
+											echo "Cancel pressed";;
+										255)
+											echo "ESC pressed.";;
+									esac;;
+								1)
+									echo "Cancel pressed";;
+								255)
+									echo "ESC pressed.";;
+							esac;;
+
+						3)	# VERIFICA CHEKSUMS
+
+							$DIALOG --clear --title "criptoSGR" --backtitle "Qual o tipo do checksum que deseja verificar?" \
+                        				--menu "Escolha uma opcção:" 20 55 4 \
+                        				1 "MAC" \
+                        				2 "HMAC" 2> $tempfile
+			
+							retval=$?
+
+                        				choice=`cat $tempfile`
+							
+							case $retval in
+								0)
+									case $choice in
+										1)
+											FILE_ORIGIN=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir ficheiro original:" --fselect $HOME/ 30 60 4`
+											FILE_MAC=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir MAC do ficheiro:" --fselect $HOME/ 30 60 4`
+
+											$DIALOG --title "criptoSGR" --clear \
+                                                                        --passwordbox "Introduza a password para desencriptar MAC:" 16 55 2> $tempfile
+											
+											password=`cat $tempfile`
+
+											$DIALOG --clear --title "criptoSGR" --backtitle "Indique o algoritmo de cifra simétrica utilizado:" \
+                  	--menu "Escolha uma opcção:" 20 65 4 \
+                        1 "DES" \
+                        2 "DES3" \
+                        3 "AES256" \
+                        4 "Blowfish" 2> $tempfile
+											choice=`cat $tempfile`
+
+											new_hash=`openssl dgst -sha224 $FILE_ORIGIN`
+											
+											case $choice in
+												1)
+													result=`openssl enc -d -des -in $FILE_MAC -pass pass:"$password"`;;
+												2)
+													result=`openssl enc -d -des3 -in $FILE_MAC -pass pass:"$password"`;;
+												3)
+													result=`openssl enc -d -aes-256-cbc -in $FILE_MAC -pass pass:"$password"`;;
+												4)
+													result=`openssl enc -d -blowfish -in $FILE_MAC -pass pass:"$password"`;;
+											esac
+											if [ "$result" = "$new_hash" ];
+														then
+															`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação OK" 10 30`
+													else
+														`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação Falhou!" 10 30`
+													fi;;
+										2)
+											FILE_ORIGIN=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir ficheiro original:" --fselect $HOME/ 30 60 4`
+											FILE_HMAC=`$DIALOG --stdout --title "criptoSGR" --backtitle "Inserir HMAC do ficheiro:" --fselect $HOME/ 30 60 4`
+
+											$DIALOG --title "criptoSGR" --clear \
+                                                                        --passwordbox "Introduza a password: " 16 51 2> $tempfile
+											
+											password=`cat $tempfile`
+											
+											result=`openssl dgst -md5 -hmac "$password" $FILE_ORIGIN`
+											
+
+											if [ "$result" = "`cat $FILE_HMAC`" ];
+														then
+															`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação OK" 10 30`
+													else
+														`$DIALOG --stdout --title "criptoSGR" --msgbox "Verificação Falhou!" 10 30`
+													fi;;
+									esac;;
+								1)
+									echo "Cancel pressed.";;
+								255)
+									echo "ESC pressed".;;
+							esac
+					esac;;
+				1)
+					echo "Cancel pressed.";;
+				255)
+					echo "ESC pressed.";;
+			esac;;
+
+			## VERIFICAR ASSINATURA / ENVELOPE / RESUMO CRIPTOGRAFICO SEGURO - FIM ##
+	
+		esac;;
+
+		## MENU PRINCIPAL - FIM ##
+1)
+	echo "Cancel pressed."
+	break;;
+255)
+	echo "ESC pressed."
+	break;;
+esac
+done
